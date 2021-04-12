@@ -30,6 +30,10 @@ int main(void) {
 
     //initialize variables
     volatile int ADC_read;
+    int prev_status;
+    int executing = 0;
+    int open = 0;
+    int close = 0;
 
 
     *(ch1) = 0x1;//Sets channel into auto-update
@@ -38,42 +42,80 @@ int main(void) {
 
 
     while(1) {
-
+        //get status of the pushbutton
         int statuspushbutton = *pushb ;
-        int prev_status;
+
 
         //set curtains to manual update
         if(switch_read() == 0) {
-            //if enough time possibly make 3 button system that allows user to start, stop, and close curtains would not use loops in that scenario    
-            
+            //if enough time possibly make 3 button system that allows user to start, stop, and close curtains would not use loops in that scenario
+
             //if open button is pressed
-            if(statuspushbutton == 1 && prev_status ==0){
+            if(statuspushbutton == 1 && prev_status ==0 && executing == 0){
                 //code to make curtains come down
-                //possibly put code on loop to prevent anything else done by the user to affect it until curtain is fully open
-            }else if (statuspushbutton==2 && prev_status ==0){
+                *dat_gpio = 0x01;//run motor clockwise
+                open =1;
+                executing = 1;
+            //if close button is pressed
+            }else if (statuspushbutton==2 && prev_status ==0 && excuting == 0){
                 //code to make curtains come up
-                //possibly put code on loop to prevent anything else done by the user to affect it until curtain is fully close
+                *dat_gpio = 0x03;//run motor counterclockwise
+                close = 1;
+                executing = 1;
+            //if button at bottom of window is pressed by the curtain
+            }else if (((statuspushbutton & 4) == 4) && open == 1 && excuting ==1){
+                *dat_gpio = 0x0;//stop motor
+                executing= 0;
+                open =0;
+            //if button at the top of window is pressed by the curtain
+            }else if(((statuspushbutton & 8) == 8) && close == 1 && excuting ==1){
+                *dat_gpio = 0x0;
+                executing = 0;
+                close = 0;
             }
 
         }
         //set curtains to automatic
         else {
 
-            //read ADC values to simulate photoresistors analog readings
-            ADC_read = ADC_reading();
+            //read ADC values to simulate photoresistors analog readings while curtain is not in motion
+            if (executing=0){
+                ADC_read = ADC_reading();
+            }
+
 
             //treshold to simulate when its dark outside
             //values go between (0-4096) if dark low values if high then its light outside
             if (ADC_read< 1500){
                 //code simulating motor closing curtain
+                if(((statuspushbutton & 8) != 8) && executing == 0){
+                    *dat_gpio = 0x03;//run motor counterlockwise
+                    executing=1;
+                    close= 1;
+                }
+                //if button at the bottom of window is pressed by the curtain
+                else if(((statuspushbutton & 8) == 8) && close == 1 && excuting ==1){
+                    *dat_gpio = 0x0;//stop motor
+                    executing = 0;
+                    close = 0;
+                }
 
-
-            }else{// its sunny outside
+            }else{// its sunny outside so curtains should be open
                 //code simulating motor opening curtain
-
+                if(((statuspushbutton&4) != 4) && executing == 0){
+                    *dat_gpio = 0x01;//run motor clockwise
+                    executing=1;
+                    open= 1;
+                //if button at the top of window is pressed by the curtain then stop motor
+                }else if(((statuspushbutton & 4) == 4) && close == 1 && excuting ==1){
+                    *dat_gpio = 0x0;//stop motor
+                    executing = 0;
+                    open = 0;
+                }
             }
 
         }
+        //set prevstate to current state
         prev_status = statuspushbutton;
     }
 }
