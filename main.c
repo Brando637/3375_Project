@@ -15,7 +15,7 @@ int switch_read(void){
    return(switchst);
 }
 //read ADC to simuate photoresistor
-int ADC_reading(int channel) {
+int ADC_reading(void) {
     volatile unsigned int *channel_reading;
     int reading;
 
@@ -30,7 +30,8 @@ int main(void) {
 
     //initialize variables
     volatile int ADC_read;
-    int prev_status;
+    volatile int delay_count;
+    int prev_status=0;
     int executing = 0;
     int open = 0;
     int close = 0;
@@ -38,7 +39,7 @@ int main(void) {
 
     *(ch1) = 0x1;//Sets channel into auto-update
     (*direction_gpio) = 0x3FF;// sets gpio as outputs
-	(*dat_gpio) = 0x0; //clear outputs
+	*dat_gpio = 0x0; //clear outputs
 
 
     while(1) {
@@ -51,24 +52,24 @@ int main(void) {
             //if enough time possibly make 3 button system that allows user to start, stop, and close curtains would not use loops in that scenario
 
             //if open button is pressed
-            if(statuspushbutton == 1 && prev_status ==0 && executing == 0){
+            if((statuspushbutton&1) == 1 && prev_status==8 && executing == 0){
                 //code to make curtains come down
                 *dat_gpio = 0x01;//run motor clockwise
                 open =1;
                 executing = 1;
             //if close button is pressed
-            }else if (statuspushbutton==2 && prev_status ==0 && excuting == 0){
+            }else if ((statuspushbutton&2)==2 && prev_status ==4 && executing == 0){
                 //code to make curtains come up
                 *dat_gpio = 0x03;//run motor counterclockwise
                 close = 1;
                 executing = 1;
             //if button at bottom of window is pressed by the curtain
-            }else if (((statuspushbutton & 4) == 4) && open == 1 && excuting ==1){
+            }else if (((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
                 *dat_gpio = 0x0;//stop motor
                 executing= 0;
                 open =0;
             //if button at the top of window is pressed by the curtain
-            }else if(((statuspushbutton & 8) == 8) && close == 1 && excuting ==1){
+            }else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
                 *dat_gpio = 0x0;
                 executing = 0;
                 close = 0;
@@ -79,7 +80,7 @@ int main(void) {
         else {
 
             //read ADC values to simulate photoresistors analog readings while curtain is not in motion
-            if (executing=0){
+            if (executing==0){
                 ADC_read = ADC_reading();
             }
 
@@ -94,7 +95,7 @@ int main(void) {
                     close= 1;
                 }
                 //if button at the bottom of window is pressed by the curtain
-                else if(((statuspushbutton & 8) == 8) && close == 1 && excuting ==1){
+                else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
                     *dat_gpio = 0x0;//stop motor
                     executing = 0;
                     close = 0;
@@ -102,18 +103,18 @@ int main(void) {
 
             }else{// its sunny outside so curtains should be open
                 //code simulating motor opening curtain
-                if(((statuspushbutton&4) != 4) && executing == 0){
+                if(((statuspushbutton&4) != 4) && executing == 0 ){
                     *dat_gpio = 0x01;//run motor clockwise
                     executing=1;
                     open= 1;
                 //if button at the top of window is pressed by the curtain then stop motor
-                }else if(((statuspushbutton & 4) == 4) && close == 1 && excuting ==1){
+                }else if(((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
                     *dat_gpio = 0x0;//stop motor
                     executing = 0;
                     open = 0;
                 }
             }
-
+        for (delay_count = 300000; delay_count != 0; --delay_count);
         }
         //set prevstate to current state
         prev_status = statuspushbutton;
