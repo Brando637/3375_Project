@@ -60,7 +60,7 @@ int main(void) {
             //if close button is pressed
             }else if ((statuspushbutton&2)==2 && prev_status ==4 && executing == 0){
                 //code to make curtains come up
-                *dat_gpio = 0x03;//run motor counterclockwise
+                *dat_gpio = 0x02;//run motor counterclockwise
                 close = 1;
                 executing = 1;
             //if button at bottom of window is pressed by the curtain
@@ -90,7 +90,7 @@ int main(void) {
             if (ADC_read< 1500){
                 //code simulating motor closing curtain
                 if(((statuspushbutton & 8) != 8) && executing == 0){
-                    *dat_gpio = 0x03;//run motor counterlockwise
+                    *dat_gpio = 0x02;//run motor counterlockwise
                     executing=1;
                     close= 1;
                 }
