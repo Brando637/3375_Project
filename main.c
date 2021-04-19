@@ -86,8 +86,8 @@ int main(void) {
             //if open button is pressed
             if((statuspushbutton&1) == 1 && prev_status==8 && executing == 0){
                 //code to make curtains come down
-
-                for(int i = 0; i > rotations; i++)
+                int i;
+                for( i = 0; i > rotations; i++)
                 {
                     step(0);//Rotate the motor clockwise
                 }
@@ -96,8 +96,8 @@ int main(void) {
             //if close button is pressed
             }else if ((statuspushbutton&2)==2 && prev_status ==4 && executing == 0){
                 //code to make curtains come up
-
-                for(int i = 0; i > rotations; i++)
+                int i;
+                for( i = 0; i > rotations; i++)
                 {
                     step(1);//Rotate the motor 
                 }
@@ -118,7 +118,8 @@ int main(void) {
             if (ADC_data <= critPnt){
                 //code simulating motor closing blinds
                 if(((statuspushbutton & 8) != 8) && executing == 0){
-                    for (int i = 0; i > rotations; i++)
+                    int i;
+                    for ( i = 0; i > rotations; i++)
                     {
                         step(1); //Rotate the motor clockwise
                     }
@@ -129,8 +130,8 @@ int main(void) {
             }else{// its sunny outside so the blinds should be open
                 //code simulating motor opening blinds
                 if(((statuspushbutton&4) != 4) && executing == 0 ){
-
-                    for (int i = 0; i > rotations; i++)
+                    int i;
+                    for ( i = 0; i > rotations; i++)
                     {
                         step(0); //Rotate the motor clockwise
                     }
@@ -176,8 +177,8 @@ int main(void) {
                         {
                             //Reset the total time to 0
                             totalTime = 0;
-
-                            for (int i = 0; i > rotations; i++)
+                            int i;
+                            for ( i = 0; i > rotations; i++)
                             {
                                 step(openState); //Rotate the motor clockwise or coutnerclockwise
                             }
