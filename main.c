@@ -4,7 +4,7 @@
 //Set pointers to board peripherals
 volatile unsigned int *dat_gpio = (unsigned int*) JP1_BASE;
 volatile unsigned int *direction_gpio = (unsigned int*) (JP1_BASE+0x04);
-volatile unsigned int * ch1 = (unsigned int*) (ADC_BASE+0x04);
+volatile unsigned int * ch0 = (unsigned int*) ADC_BASE;
 volatile int * switch_ptr = (int*)SW_BASE;
 volatile int * pushb = (int*)KEY_BASE;
 
@@ -25,6 +25,30 @@ int switch_read(void){
 //     reading = *channel_reading & 0xFFF;
 // 	return reading;
 // }
+
+//Activate Stepper Motor
+
+void step(int rotate)
+{
+    //Rotate the motor clockwise
+    if(rotate == 0)
+    {
+        *dat_gpio = 0x09;
+        *dat_gpio = 0x0c;
+        *dat_gpio = 0x06;
+        *dat_gpio = 0x03;
+    }
+
+    //Rotate the motor counterclockwise
+    else
+    {
+        *(dat_gpio) = 0x03;
+        *(dat_gpio) = 0x06;
+        *(dat_gpio) = 0x0c;
+        *(dat_gpio) = 0x09;
+    }
+}
+
 int main(void) {
 
 
@@ -38,6 +62,9 @@ int main(void) {
 
     int interval = 100000000;//1 second
     int totalTime = 0;//Holds the total time that has passed in seconds
+    int bright, dark, critPnt;//Values to be used by when in automatic mode
+    bright = dark = critPnt = 0;
+    int rotations = 500;//Change this value to the number of rotations needed fully unfurl and furl the blinds
 
     typedef struct _interval_timer
     {
@@ -61,7 +88,7 @@ int main(void) {
         //get status of the pushbutton
         int statuspushbutton = *pushb ;
 
-        *(ch1) = 0x1;//Sets all channels to auto-update and starts ADC read
+        *(ch0) = 0x0;//Sets all channels to update and starts ADC read
 
 
         //Set curtains to manual update
@@ -71,73 +98,87 @@ int main(void) {
             //if open button is pressed
             if((statuspushbutton&1) == 1 && prev_status==8 && executing == 0){
                 //code to make curtains come down
-                *dat_gpio = 0x01;//run motor clockwise
+
+                for(int i = 0; i > rotations; i++)
+                {
+                    step(0);//Rotate the motor clockwise
+                }
                 open =1;
                 executing = 1;
             //if close button is pressed
             }else if ((statuspushbutton&2)==2 && prev_status ==4 && executing == 0){
                 //code to make curtains come up
-                *dat_gpio = 0x02;//run motor counterclockwise
+
+                for(int i = 0; i > rotations; i++)
+                {
+                    step(1);//Rotate the motor 
+                }
                 close = 1;
                 executing = 1;
-            //if button at bottom of window is pressed by the curtain
-            }else if (((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
-                *dat_gpio = 0x0;//stop motor
-                executing= 0;
-                open =0;
-            //if button at the top of window is pressed by the curtain
-            }else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
-                *dat_gpio = 0x0;
-                executing = 0;
-                close = 0;
-            }
+            // //if button at bottom of window is pressed by the curtain
+            // }else if (((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
+            //     *dat_gpio = 0x0;//stop motor
+            //     executing= 0;
+            //     open =0;
+            // //if button at the top of window is pressed by the curtain
+            // }else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
+            //     *dat_gpio = 0x0;
+            //     executing = 0;
+            //     close = 0;
+            // }
 
         }
 
         //Set curtains to automatic
         else if (switch_read() == 0x1) {
 
-            //Read ADC values to simulate photoresistors analog readings while curtain is not in motion
+            //Read ADC values to simulate photoresistors analog readings while the blinds are not in motion
             if (executing==0){
-                ADC_data = *(ch1-0x04);
+                ADC_data = *(ch0);
             }
 
-
-            //Threshold to simulate when its dark outside
-            //Values go between (0-4096) if dark low values if high then its light outside
-            if (ADC_data< 1500){
-                //code simulating motor closing curtain
+            //If the current ADC reading measure gets to the critical point then the blinds need to close 
+            if (ADC_data <= critPnt){
+                //code simulating motor closing blinds
                 if(((statuspushbutton & 8) != 8) && executing == 0){
-                    *dat_gpio = 0x02;//run motor counterlockwise
+                    for (int i = 0; i > rotations; i++)
+                    {
+                        step(1); //Rotate the motor clockwise
+                    }
                     executing=1;
                     close= 1;
                 }
-                //if button at the bottom of window is pressed by the curtain
-                else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
-                    *dat_gpio = 0x0;//stop motor
-                    executing = 0;
-                    close = 0;
-                }
+                // //if button at the bottom of window is pressed by the blinds
+                // else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
+                //     *dat_gpio = 0x0;//stop motor
+                //     executing = 0;
+                //     close = 0;
+                // }
 
-            }else{// its sunny outside so curtains should be open
-                //code simulating motor opening curtain
+            }else{// its sunny outside so the blinds should be open
+                //code simulating motor opening blinds
                 if(((statuspushbutton&4) != 4) && executing == 0 ){
-                    *dat_gpio = 0x01;//run motor clockwise
+
+                    for (int i = 0; i > rotations; i++)
+                    {
+                        step(0); //Rotate the motor clockwise
+                    }
                     executing=1;
                     open= 1;
-                //if button at the top of window is pressed by the curtain then stop motor
-                }else if(((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
-                    *dat_gpio = 0x0;//stop motor
-                    executing = 0;
-                    open = 0;
+                //if button at the top of window is pressed by the blinds then stop motor
                 }
+                // else if(((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
+                //     *dat_gpio = 0x0;//stop motor
+                //     executing = 0;
+                //     open = 0;
+                // }
             }
-        for (delay_count = 300000; delay_count != 0; --delay_count);
         }
 
         //Set curtains to timer mode
         else if (switch_read() == 0x2)
         {
+            int openState = 0;
             //Stop the timer incase it was running previously;
             timer_1_ptr -> control = 0x8;
             
@@ -171,11 +212,43 @@ int main(void) {
                             //Reset the total time to 0
                             totalTime = 0;
 
-                            //Rotate the Stepper Motor
+                            for (int i = 0; i > rotations; i++)
+                            {
+                                step(openState); //Rotate the motor clockwise or coutnerclockwise
+                            }
+                            
+                            //Change the state for opening or closing the blinds
+                            if(openState == 0)
+                            { openState = 1; }
+                            if(openState == 1)
+                            {openState =0;}
                         }
                     }
                 }
 
+        }
+
+        //Setup mode for setting brightess point in day and darkest point in day
+        else if(switch_read() == 0x3)
+        {
+            //User wants to set the current brightness as the brightest point in the day
+            if(statuspushbutton == 0x1)
+            {
+                bright = *(ch0);
+            }
+
+            //User wants to set the current brightness as the dimmest point in the day
+            if(statuspushbutton = 0x2)
+            {
+                dark = *(ch0);
+            }
+
+            //Set the critical point which is used to cause the blinds to open or close
+            if( (bright != 0 && dark != 0) && (bright > dark) )
+            {
+                //The critical point is when the value gets to a 30% 
+                critPnt = (bright - dark) * 0.3;
+            }
         }
         //set prevstate to current state
         prev_status = statuspushbutton;
