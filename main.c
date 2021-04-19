@@ -1,27 +1,27 @@
 #include "address_map_arm.h"
 #include <stdio.h>
 
-//set pointers to board peripherals
+//Set pointers to board peripherals
 volatile unsigned int *dat_gpio = (unsigned int*) JP1_BASE;
 volatile unsigned int *direction_gpio = (unsigned int*) (JP1_BASE+0x04);
 volatile unsigned int * ch1 = (unsigned int*) (ADC_BASE+0x04);
 volatile int * switch_ptr = (int*)SW_BASE;
 volatile int * pushb = (int*)KEY_BASE;
 
-//read switch state
+//Read switch state
 int switch_read(void){
    int switchst = *switch_ptr;
-   switchst = switchst & 1;
+   switchst = switchst & 0x11;//Reading from the first two switches
    return(switchst);
 }
-//read ADC to simuate photoresistor
+//Read ADC to simluate photoresistor
 int ADC_reading(void) {
     volatile unsigned int *channel_reading;
     int reading;
 
     channel_reading = (unsigned int*) ADC_BASE;
 
-    //rturm 12-bit data from channel
+    //return 12-bit data from channel
     reading = *channel_reading & 0xFFF;
 	return reading;
 }
@@ -36,6 +36,21 @@ int main(void) {
     int open = 0;
     int close = 0;
 
+    int interval = 100000000;//1 second
+    int totalTime = 0;//Holds the total time that has passed in seconds
+
+    typedef struct _interval_timer
+    {
+        int status;
+        int control;
+        int low_period;
+        int high_period;
+        int low_counter;
+        int high_counter;
+    } interval_timer;
+
+    volatile interval_timer* const timer_1_ptr = (interval_timer*)TIMER_BASE;
+
 
     *(ch1) = 0x1;//Sets channel into auto-update
     (*direction_gpio) = 0x3FF;// sets gpio as outputs
@@ -47,8 +62,8 @@ int main(void) {
         int statuspushbutton = *pushb ;
 
 
-        //set curtains to manual update
-        if(switch_read() == 0) {
+        //Set curtains to manual update
+        if(switch_read() == 0x0) {
             //if enough time possibly make 3 button system that allows user to start, stop, and close curtains would not use loops in that scenario
 
             //if open button is pressed
@@ -76,17 +91,18 @@ int main(void) {
             }
 
         }
-        //set curtains to automatic
-        else {
 
-            //read ADC values to simulate photoresistors analog readings while curtain is not in motion
+        //Set curtains to automatic
+        else if (switch_read() == 0x1) {
+
+            //Read ADC values to simulate photoresistors analog readings while curtain is not in motion
             if (executing==0){
                 ADC_read = ADC_reading();
             }
 
 
-            //treshold to simulate when its dark outside
-            //values go between (0-4096) if dark low values if high then its light outside
+            //Threshold to simulate when its dark outside
+            //Values go between (0-4096) if dark low values if high then its light outside
             if (ADC_read< 1500){
                 //code simulating motor closing curtain
                 if(((statuspushbutton & 8) != 8) && executing == 0){
@@ -115,6 +131,48 @@ int main(void) {
                 }
             }
         for (delay_count = 300000; delay_count != 0; --delay_count);
+        }
+
+        //Set curtains to timer mode
+        else if (switch_read() == 0x2)
+        {
+            //Stop the timer incase it was running previously;
+            timer_1_ptr -> control = 0x8;
+            
+            //Clear the timer just in case there was something there previously
+            timer_1_ptr -> status = 0xa;
+
+            //Clear the total time elapsed
+            totalTime = 0;
+
+            //Start the timer
+                //We'll set the interval for the timer first
+                timer_1_ptr -> low_period = interval;
+                timer_1_ptr -> high_period = interval >> 16;
+
+                //Actually start the timer
+                timer_1_ptr -> control = 0x6;
+
+                //Continue going on with the timer as long as the switch combination is 0x10
+                while(switch_read() == 0x2)
+                {
+                    //Check if we have met the timeout for the interval
+                    if(timer_1_ptr -> status == 0x3)
+                    {
+                        totalTime += 1;//1s has passed
+                        //Clear the timer
+                        timer_1_ptr -> status = 0xa;
+
+                        //Check to see if the total time that has passed is 28800 seconds(8 hours) 
+                        if(totalTime == 28800)
+                        {
+                            //Reset the total time to 0
+                            totalTime = 0;
+                        }
+
+                    }
+                }
+
         }
         //set prevstate to current state
         prev_status = statuspushbutton;
