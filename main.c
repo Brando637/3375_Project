@@ -14,20 +14,8 @@ int switch_read(void){
    switchst = switchst & 0x11;//Reading from the first two switches
    return(switchst);
 }
-// //Read ADC to simluate photoresistor
-// int ADC_reading(void) {
-//     volatile unsigned int *channel_reading;
-//     int reading;
-
-//     channel_reading = (unsigned int*) ADC_BASE;
-
-//     //return 12-bit data from channel
-//     reading = *channel_reading & 0xFFF;
-// 	return reading;
-// }
 
 //Activate Stepper Motor
-
 void step(int rotate)
 {
     //Rotate the motor clockwise
@@ -115,18 +103,7 @@ int main(void) {
                 }
                 close = 1;
                 executing = 1;
-            // //if button at bottom of window is pressed by the curtain
-            // }else if (((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
-            //     *dat_gpio = 0x0;//stop motor
-            //     executing= 0;
-            //     open =0;
-            // //if button at the top of window is pressed by the curtain
-            // }else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
-            //     *dat_gpio = 0x0;
-            //     executing = 0;
-            //     close = 0;
-            // }
-
+            }
         }
 
         //Set curtains to automatic
@@ -148,12 +125,6 @@ int main(void) {
                     executing=1;
                     close= 1;
                 }
-                // //if button at the bottom of window is pressed by the blinds
-                // else if(((statuspushbutton & 8) == 8) && close == 1 && executing ==1){
-                //     *dat_gpio = 0x0;//stop motor
-                //     executing = 0;
-                //     close = 0;
-                // }
 
             }else{// its sunny outside so the blinds should be open
                 //code simulating motor opening blinds
@@ -165,13 +136,7 @@ int main(void) {
                     }
                     executing=1;
                     open= 1;
-                //if button at the top of window is pressed by the blinds then stop motor
                 }
-                // else if(((statuspushbutton & 4) == 4) && open == 1 && executing ==1){
-                //     *dat_gpio = 0x0;//stop motor
-                //     executing = 0;
-                //     open = 0;
-                // }
             }
         }
 
