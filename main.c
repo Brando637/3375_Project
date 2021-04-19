@@ -14,22 +14,22 @@ int switch_read(void){
    switchst = switchst & 0x11;//Reading from the first two switches
    return(switchst);
 }
-//Read ADC to simluate photoresistor
-int ADC_reading(void) {
-    volatile unsigned int *channel_reading;
-    int reading;
+// //Read ADC to simluate photoresistor
+// int ADC_reading(void) {
+//     volatile unsigned int *channel_reading;
+//     int reading;
 
-    channel_reading = (unsigned int*) ADC_BASE;
+//     channel_reading = (unsigned int*) ADC_BASE;
 
-    //return 12-bit data from channel
-    reading = *channel_reading & 0xFFF;
-	return reading;
-}
+//     //return 12-bit data from channel
+//     reading = *channel_reading & 0xFFF;
+// 	return reading;
+// }
 int main(void) {
 
 
     //initialize variables
-    volatile int ADC_read;
+    unsigned int ADC_data;
     volatile int delay_count;
     int prev_status=0;
     int executing = 0;
@@ -52,7 +52,7 @@ int main(void) {
     volatile interval_timer* const timer_1_ptr = (interval_timer*)TIMER_BASE;
 
 
-    *(ch1) = 0x1;//Sets channel into auto-update
+    
     (*direction_gpio) = 0x3FF;// sets gpio as outputs
 	*dat_gpio = 0x0; //clear outputs
 
@@ -60,6 +60,8 @@ int main(void) {
     while(1) {
         //get status of the pushbutton
         int statuspushbutton = *pushb ;
+
+        *(ch1) = 0x1;//Sets all channels to auto-update and starts ADC read
 
 
         //Set curtains to manual update
@@ -97,13 +99,13 @@ int main(void) {
 
             //Read ADC values to simulate photoresistors analog readings while curtain is not in motion
             if (executing==0){
-                ADC_read = ADC_reading();
+                ADC_data = *(ch1-0x04);
             }
 
 
             //Threshold to simulate when its dark outside
             //Values go between (0-4096) if dark low values if high then its light outside
-            if (ADC_read< 1500){
+            if (ADC_data< 1500){
                 //code simulating motor closing curtain
                 if(((statuspushbutton & 8) != 8) && executing == 0){
                     *dat_gpio = 0x02;//run motor counterlockwise
@@ -168,8 +170,9 @@ int main(void) {
                         {
                             //Reset the total time to 0
                             totalTime = 0;
-                        }
 
+                            //Rotate the Stepper Motor
+                        }
                     }
                 }
 
